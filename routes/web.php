@@ -24,7 +24,7 @@ Route::get('/', function () {
 })->name('home');
 
 // Authentication Routes
-Route::middleware('guest')->group(function () {
+Route::middleware('guest.custom')->group(function () {
     Route::get('/register', [UserController::class, 'showRegistrationForm'])->name('register');
     Route::post('/register', [UserController::class, 'register']);
     
@@ -33,7 +33,7 @@ Route::middleware('guest')->group(function () {
 });
 
 // Authenticated Routes
-Route::middleware('auth')->group(function () {
+Route::middleware('auth.custom')->group(function () {
     // Logout
     Route::post('/logout', [UserController::class, 'logout'])->name('logout');
     
@@ -54,7 +54,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/my-events', [EventController::class, 'myEvents'])->name('events.my-events');
         
         // Event Management (for organizers/admins)
-        Route::middleware('can:organizer')->group(function () {
+        Route::middleware('role:organizer')->group(function () {
             Route::get('/{id}/edit', [EventController::class, 'edit'])->name('events.edit');
             Route::put('/{id}', [EventController::class, 'update'])->name('events.update');
             Route::delete('/{id}', [EventController::class, 'destroy'])->name('events.destroy');
@@ -79,9 +79,9 @@ Route::prefix('events')->group(function () {
     Route::get('/{id}', [EventController::class, 'show'])->name('events.show');
 });
 
-// Admin Routes (if needed in future)
-Route::middleware(['auth', 'can:admin'])->prefix('admin')->group(function () {
-    Route::get('/users', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('admin.users');
-    Route::get('/events', [\App\Http\Controllers\Admin\EventController::class, 'index'])->name('admin.events');
-    Route::get('/stats', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('admin.dashboard');
-});
+// Admin Routes (commented out until admin controllers are created)
+// Route::middleware(['auth.custom', 'role:admin'])->prefix('admin')->group(function () {
+//     Route::get('/users', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('admin.users');
+//     Route::get('/events', [\App\Http\Controllers\Admin\EventController::class, 'index'])->name('admin.events');
+//     Route::get('/stats', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('admin.dashboard');
+// });
