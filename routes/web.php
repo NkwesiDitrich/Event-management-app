@@ -1,11 +1,11 @@
 <?php
 
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\EventController;
-use App\Http\Controllers\RegistrationController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\EventController as AdminEventController;
+use App\Http\Controllers\RegistrationManagementController;
+use Illuminate\Support\Facades\Auth;
 
 /*
 |--------------------------------------------------------------------------
@@ -13,75 +13,83 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 |
 | Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
+| routes are loaded by the RouteServiceProvider within a group which
+| contains the "web" middleware group. Now create something great!
 |
 */
 
-// Public Routes
+// Public routes
 Route::get('/', function () {
-    return redirect()->route('events.index');
-})->name('home');
-
-// Authentication Routes
-Route::middleware('guest.custom')->group(function () {
-    Route::get('/register', [UserController::class, 'showRegistrationForm'])->name('register');
-    Route::post('/register', [UserController::class, 'register']);
-    
-    Route::get('/login', [UserController::class, 'showLoginForm'])->name('login');
-    Route::post('/login', [UserController::class, 'login']);
+    return view('welcome');
 });
 
-// Authenticated Routes
-Route::middleware('auth.custom')->group(function () {
-    // Logout
-    Route::post('/logout', [UserController::class, 'logout'])->name('logout');
+// Authentication routes (assuming Laravel Breeze/UI is used)
+Auth::routes();
+
+// Protected routes (require authentication)
+Route::middleware(['auth'])->group(function () {
     
-    // Dashboard
+    // Dashboard routes
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     
-    // Profile Management
-    Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
-    Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    // Registration management routes
+    Route::prefix('registrations')->name('registrations.')->group(function () {
+        Route::get('/', [RegistrationManagementController::class, 'index'])->name('index');
+        Route::post('/{eventId}/unregister', [RegistrationManagementController::class, 'unregister'])->name('unregister');
+    });
     
-    // Event Management Routes
-    Route::prefix('events')->group(function () {
-        // Event Creation
-        Route::get('/create', [EventController::class, 'create'])->name('events.create');
-        Route::post('/store', [EventController::class, 'store'])->name('events.store');
+    // Profile routes
+    Route::get('/profile', function () {
+        return view('profile.edit');
+    })->name('profile');
+    
+    // Event routes (assuming these exist)
+    Route::prefix('events')->name('events.')->group(function () {
+        Route::get('/', 'EventController@index')->name('index');
+        Route::get('/create', 'EventController@create')->name('create');
+        Route::post('/', 'EventController@store')->name('store');
+        Route::get('/{event}', 'EventController@show')->name('show');
+        Route::get('/{event}/edit', 'EventController@edit')->name('edit');
+        Route::put('/{event}', 'EventController@update')->name('update');
+        Route::delete('/{event}', 'EventController@destroy')->name('destroy');
+        Route::post('/{event}/register', 'EventController@register')->name('register');
+        Route::post('/{event}/unregister', 'EventController@unregister')->name('unregister');
+        Route::post('/{event}/publish', 'EventController@publish')->name('publish');
+        Route::get('/{event}/attendees', 'EventController@attendees')->name('attendees');
+        Route::get('/my-events', 'EventController@myEvents')->name('my-events');
+    });
+    
+    // Admin routes (require admin role)
+    Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
         
-        // Organizer's Events
-        Route::get('/my-events', [EventController::class, 'myEvents'])->name('events.my-events');
-        
-        // Event Management (for organizers/admins)
-        Route::middleware('role:organizer')->group(function () {
-            Route::get('/{id}/edit', [EventController::class, 'edit'])->name('events.edit');
-            Route::put('/{id}', [EventController::class, 'update'])->name('events.update');
-            Route::delete('/{id}', [EventController::class, 'destroy'])->name('events.destroy');
-            Route::post('/{id}/publish', [EventController::class, 'publish'])->name('events.publish');
-            Route::post('/{id}/cancel', [EventController::class, 'cancel'])->name('events.cancel');
-            
-            // Attendee Management
-            Route::get('/{id}/attendees', [EventController::class, 'attendees'])->name('events.attendees');
+        // Admin user management
+        Route::prefix('users')->name('users.')->group(function () {
+            Route::get('/', [AdminUserController::class, 'index'])->name('index');
+            Route::put('/{userId}/role', [AdminUserController::class, 'updateRole'])->name('role');
         });
+        
+        // Admin event management
+        Route::prefix('events')->name('events.')->group(function () {
+            Route::get('/', [AdminEventController::class, 'index'])->name('index');
+            Route::post('/{eventId}/approve', [AdminEventController::class, 'approve'])->name('approve');
+            Route::post('/{eventId}/reject', [AdminEventController::class, 'reject'])->name('reject');
+            Route::delete('/{eventId}', [AdminEventController::class, 'delete'])->name('delete');
+        });
+        
+        // Admin reports (placeholder)
+        Route::get('/reports', function () {
+            return view('admin.reports.index');
+        })->name('reports');
     });
     
-    // Registration Routes (AJAX)
-    Route::prefix('events')->group(function () {
-        Route::post('/{eventId}/register', [RegistrationController::class, 'register'])->name('events.register');
-        Route::post('/{eventId}/unregister', [RegistrationController::class, 'unregister'])->name('events.unregister');
+    // Organizer routes (require organizer role)
+    Route::middleware(['organizer'])->group(function () {
+        // Organizer-specific routes can be added here
     });
 });
 
-// Public Event Routes (accessible to all)
-Route::prefix('events')->group(function () {
-    Route::get('/', [EventController::class, 'index'])->name('events.index');
-    Route::get('/{id}', [EventController::class, 'show'])->name('events.show');
+// Fallback route for admin users management (alternative naming)
+Route::middleware(['auth', 'admin'])->group(function () {
+    Route::get('/admin/users', [AdminUserController::class, 'index'])->name('admin.users');
+    Route::get('/admin/events', [AdminEventController::class, 'index'])->name('admin.events');
 });
-
-// Admin Routes (commented out until admin controllers are created)
-// Route::middleware(['auth.custom', 'role:admin'])->prefix('admin')->group(function () {
-//     Route::get('/users', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('admin.users');
-//     Route::get('/events', [\App\Http\Controllers\Admin\EventController::class, 'index'])->name('admin.events');
-//     Route::get('/stats', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('admin.dashboard');
-// });

@@ -14,4 +14,10 @@ interface UserRepositoryInterface
     public function findByRole(UserRole $role): array;
     public function delete(User $user): void;
     public function existsByEmail(Email $email): bool;
+    /**
+     * Get all users.
+     *
+     * @return User[]
+     */
+    public function findAll(): array;
 }
