@@ -10,9 +10,9 @@ use App\Application\DTOs\CreateEventDTO;
 use App\Http\Requests\CreateEventRequest;
 use App\Domain\Event\Repositories\EventRepositoryInterface;
 use App\Domain\Registration\Repositories\RegistrationRepositoryInterface;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class EventController extends Controller
@@ -54,20 +54,23 @@ class EventController extends Controller
     public function store(CreateEventRequest $request): RedirectResponse
     {
         try {
+            /** @var \App\Models\User|null $user */
+            $user = Auth::user();
+
             $dto = new CreateEventDTO(
                 $request->title,
                 $request->description,
                 $request->event_date,
                 $request->location,
                 $request->capacity,
-                auth()->id()
+                $user ? $user->getId() : 0
             );
 
             $publish = $request->action === 'publish';
             $event = $this->createEventUseCase->execute($dto, $publish);
 
-            $message = $publish 
-                ? 'Event created and published successfully!' 
+            $message = $publish
+                ? 'Event created and published successfully!'
                 : 'Event saved as draft successfully!';
 
             return redirect()->route('events.show', $event->getId())
@@ -80,14 +83,16 @@ class EventController extends Controller
     public function show(int $id): View
     {
         $event = $this->getEventByIdUseCase->execute($id);
-        
+
         if (!$event) {
             abort(404, 'Event not found');
         }
 
         $isRegistered = false;
-        if (auth()->check()) {
-            $isRegistered = $this->registrationRepository->existsByUserAndEvent(auth()->id(), $id);
+        if (Auth::check()) {
+            /** @var \App\Models\User $user */
+            $user = Auth::user();
+            $isRegistered = $this->registrationRepository->existsByUserAndEvent($user->getId(), $id);
         }
 
         return view('events.show', compact('event', 'isRegistered'));
@@ -95,20 +100,24 @@ class EventController extends Controller
 
     public function myEvents(): View
     {
-        $events = $this->getEventsByOrganizerUseCase->execute(auth()->id());
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+        $events = $this->getEventsByOrganizerUseCase->execute($user ? $user->getId() : 0);
         return view('events.my-events', compact('events'));
     }
 
     public function edit(int $id): View
     {
         $event = $this->getEventByIdUseCase->execute($id);
-        
+
         if (!$event) {
             abort(404, 'Event not found');
         }
 
-        // Check if user is the organizer
-        if ($event->getOrganizer()->getId() !== auth()->id()) {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if (!$user || $event->getOrganizer()->getId() !== $user->getId()) {
             abort(403, 'Unauthorized');
         }
 
@@ -118,17 +127,18 @@ class EventController extends Controller
     public function update(Request $request, int $id): RedirectResponse
     {
         $event = $this->getEventByIdUseCase->execute($id);
-        
+
         if (!$event) {
             abort(404, 'Event not found');
         }
 
-        // Check if user is the organizer
-        if ($event->getOrganizer()->getId() !== auth()->id()) {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if (!$user || $event->getOrganizer()->getId() !== $user->getId()) {
             abort(403, 'Unauthorized');
         }
 
-        // Basic validation
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
@@ -138,8 +148,6 @@ class EventController extends Controller
         ]);
 
         try {
-            // Update event properties (you'd need to add update methods to the Event entity)
-            // For now, we'll just redirect with a success message
             return redirect()->route('events.show', $id)
                 ->with('success', 'Event updated successfully!');
         } catch (\Exception $e) {
@@ -150,13 +158,15 @@ class EventController extends Controller
     public function destroy(int $id): RedirectResponse
     {
         $event = $this->getEventByIdUseCase->execute($id);
-        
+
         if (!$event) {
             abort(404, 'Event not found');
         }
 
-        // Check if user is the organizer
-        if ($event->getOrganizer()->getId() !== auth()->id()) {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if (!$user || $event->getOrganizer()->getId() !== $user->getId()) {
             abort(403, 'Unauthorized');
         }
 
@@ -172,20 +182,22 @@ class EventController extends Controller
     public function publish(int $id): RedirectResponse
     {
         $event = $this->getEventByIdUseCase->execute($id);
-        
+
         if (!$event) {
             abort(404, 'Event not found');
         }
 
-        // Check if user is the organizer
-        if ($event->getOrganizer()->getId() !== auth()->id()) {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if (!$user || $event->getOrganizer()->getId() !== $user->getId()) {
             abort(403, 'Unauthorized');
         }
 
         try {
             $event->publish();
             $this->eventRepository->save($event);
-            
+
             return redirect()->route('events.show', $id)
                 ->with('success', 'Event published successfully!');
         } catch (\Exception $e) {
@@ -196,20 +208,22 @@ class EventController extends Controller
     public function cancel(int $id): RedirectResponse
     {
         $event = $this->getEventByIdUseCase->execute($id);
-        
+
         if (!$event) {
             abort(404, 'Event not found');
         }
 
-        // Check if user is the organizer
-        if ($event->getOrganizer()->getId() !== auth()->id()) {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if (!$user || $event->getOrganizer()->getId() !== $user->getId()) {
             abort(403, 'Unauthorized');
         }
 
         try {
             $event->cancel();
             $this->eventRepository->save($event);
-            
+
             return redirect()->route('events.show', $id)
                 ->with('success', 'Event cancelled successfully!');
         } catch (\Exception $e) {
@@ -220,18 +234,20 @@ class EventController extends Controller
     public function attendees(int $id): View
     {
         $event = $this->getEventByIdUseCase->execute($id);
-        
+
         if (!$event) {
             abort(404, 'Event not found');
         }
 
-        // Check if user is the organizer
-        if ($event->getOrganizer()->getId() !== auth()->id()) {
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if (!$user || $event->getOrganizer()->getId() !== $user->getId()) {
             abort(403, 'Unauthorized');
         }
 
         $registrations = $this->registrationRepository->findByEventId($id);
-        
+
         return view('events.attendees', compact('event', 'registrations'));
     }
 }

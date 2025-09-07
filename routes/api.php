@@ -1,9 +1,5 @@
 <?php
 
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\EventController as ApiEventController;
-use App\Http\Controllers\Api\RegistrationController as ApiRegistrationController;
-use App\Http\Controllers\Api\UserController as ApiUserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -18,47 +14,54 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// Public API Routes
+// Basic API info endpoint
+Route::get('/', function () {
+    return response()->json([
+        'message' => 'Event Management API',
+        'version' => 'v1',
+        'status' => 'active',
+        'endpoints' => [
+            'GET /api/v1/info' => 'API information',
+            'GET /api/user' => 'Get authenticated user (requires auth:sanctum)'
+        ]
+    ]);
+});
+
+// API version 1
 Route::prefix('v1')->group(function () {
     
-    // Authentication endpoints
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login', [AuthController::class, 'login']);
+    // API info endpoint
+    Route::get('/info', function () {
+        return response()->json([
+            'api_version' => '1.0',
+            'laravel_version' => app()->version(),
+            'php_version' => PHP_VERSION,
+            'timezone' => config('app.timezone'),
+            'environment' => app()->environment()
+        ]);
+    });
     
-    // Public event data
-    Route::get('/events', [ApiEventController::class, 'index']);
-    Route::get('/events/{id}', [ApiEventController::class, 'show']);
-    Route::get('/events/{id}/attendees', [ApiEventController::class, 'attendees']);
+    // Future API endpoints can be added here when API controllers are created
+    // Example structure:
+    // Route::post('/register', [AuthController::class, 'register']);
+    // Route::post('/login', [AuthController::class, 'login']);
+    // Route::get('/events', [ApiEventController::class, 'index']);
+    
 });
 
 // Protected API Routes (require authentication)
-Route::middleware('auth:sanctum')->prefix('v1')->group(function () {
+Route::middleware('auth:sanctum')->group(function () {
     
-    // User management
+    // Get authenticated user
     Route::get('/user', function (Request $request) {
-        return $request->user();
+        return response()->json([
+            'user' => $request->user(),
+            'authenticated' => true
+        ]);
     });
-    Route::put('/user/profile', [ApiUserController::class, 'updateProfile']);
-    Route::put('/user/password', [ApiUserController::class, 'updatePassword']);
     
-    // Event management
-    Route::apiResource('events', ApiEventController::class)->except(['index', 'show']);
-    Route::post('/events/{event}/publish', [ApiEventController::class, 'publish']);
-    Route::post('/events/{event}/cancel', [ApiEventController::class, 'cancel']);
+    // Future authenticated endpoints can be added here
     
-    // Registration management
-    Route::post('/events/{event}/register', [ApiRegistrationController::class, 'register']);
-    Route::delete('/events/{event}/unregister', [ApiRegistrationController::class, 'unregister']);
-    Route::get('/my-registrations', [ApiRegistrationController::class, 'myRegistrations']);
-    Route::get('/my-events', [ApiEventController::class, 'myEvents']);
-    
-    // Admin endpoints
-    Route::middleware('can:admin')->group(function () {
-        Route::apiResource('users', ApiUserController::class);
-        Route::get('/stats/overview', [\App\Http\Controllers\Api\Admin\StatsController::class, 'overview']);
-        Route::get('/stats/events', [\App\Http\Controllers\Api\Admin\StatsController::class, 'eventStats']);
-        Route::get('/stats/users', [\App\Http\Controllers\Api\Admin\StatsController::class, 'userStats']);
-    });
 });
 
 // Fallback API route
@@ -66,6 +69,11 @@ Route::fallback(function () {
     return response()->json([
         'message' => 'API endpoint not found. Please check the documentation.',
         'version' => 'v1',
-        'base_url' => url('/api/v1')
+        'base_url' => url('/api/v1'),
+        'available_endpoints' => [
+            'GET /api/' => 'API root information',
+            'GET /api/v1/info' => 'API version information',
+            'GET /api/user' => 'Get authenticated user (requires auth:sanctum)'
+        ]
     ], 404);
 });

@@ -3,12 +3,16 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Auth;
+
 
 class CreateEventRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return auth()->check() && auth()->user()->isOrganizer();
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+        return Auth::check() && $user && $user->isOrganizer();
     }
 
     public function rules(): array
@@ -25,8 +29,16 @@ class CreateEventRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'event_date.after' => 'Event date must be in the future.',
-            'capacity.min' => 'Capacity must be at least 1 if specified.',
+            'title.required' => 'The event title is required.',
+            'title.max' => 'The event title may not be greater than 255 characters.',
+            'description.required' => 'The event description is required.',
+            'event_date.required' => 'The event date is required.',
+            'event_date.date' => 'The event date must be a valid date.',
+            'event_date.after' => 'The event date must be in the future.',
+            'location.required' => 'The event location is required.',
+            'location.max' => 'The event location may not be greater than 500 characters.',
+            'capacity.integer' => 'The capacity must be a number.',
+            'capacity.min' => 'The capacity must be at least 1.',
         ];
     }
 }

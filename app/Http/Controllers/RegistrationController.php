@@ -32,7 +32,12 @@ class RegistrationController extends Controller
     public function register(Request $request, int $eventId): JsonResponse
     {
         try {
+            /** @var \App\Models\User $user */
             $user = Auth::user();
+            
+            if (!$user) {
+                return response()->json(['message' => 'User not authenticated'], 401);
+            }
             
             $this->registerUseCase->execute($user->getId(), $eventId);
             
@@ -48,7 +53,12 @@ class RegistrationController extends Controller
     public function unregister(Request $request, int $eventId): JsonResponse
     {
         try {
+            /** @var \App\Models\User $user */
             $user = Auth::user();
+            
+            if (!$user) {
+                return response()->json(['message' => 'User not authenticated'], 401);
+            }
             
             $this->unregisterUseCase->execute($user->getId(), $eventId);
             
@@ -64,6 +74,11 @@ class RegistrationController extends Controller
     private function buildResponse(int $userId, int $eventId, string $message): JsonResponse
     {
         $event = $this->eventRepository->findById($eventId);
+        
+        if (!$event) {
+            return response()->json(['message' => 'Event not found'], 404);
+        }
+        
         $isRegistered = $this->registrationRepository->existsByUserAndEvent($userId, $eventId);
 
         return response()->json([

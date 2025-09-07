@@ -21,6 +21,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'role',
     ];
 
     /**
@@ -44,5 +45,45 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Get the user's ID (alias for Laravel's id attribute)
+     */
+    public function getId(): int
+    {
+        return $this->id;
+    }
+
+    /**
+     * Check if user is an admin
+     */
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    /**
+     * Check if user is an organizer (or admin)
+     */
+    public function isOrganizer(): bool
+    {
+        return $this->role === 'organizer' || $this->isAdmin();
+    }
+
+    /**
+     * Check if user is an attendee
+     */
+    public function isAttendee(): bool
+    {
+        return $this->role === 'attendee';
+    }
+
+    /**
+     * Get user's role
+     */
+    public function getRole(): string
+    {
+        return $this->role;
     }
 }

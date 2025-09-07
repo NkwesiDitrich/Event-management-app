@@ -6,6 +6,7 @@ use App\Application\UseCases\Event\GetAllEventsUseCase;
 use App\Application\UseCases\Event\GetEventsByOrganizerUseCase;
 use App\Application\UseCases\Registration\GetUserRegistrationsUseCase;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
@@ -25,15 +26,21 @@ class DashboardController extends Controller
 
     public function index(): View
     {
-        $user = auth()->user();
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
         $data = [];
 
-        if ($user->isOrganizer()) {
+        if ($user && $user->isOrganizer()) {
             $data['organizedEvents'] = $this->getEventsByOrganizerUseCase->execute($user->getId());
         }
 
         $data['upcomingEvents'] = $this->getAllEventsUseCase->execute(true);
-        $data['userRegistrations'] = $this->getUserRegistrationsUseCase->execute($user->getId());
+        
+        if ($user) {
+            $data['userRegistrations'] = $this->getUserRegistrationsUseCase->execute($user->getId());
+        } else {
+            $data['userRegistrations'] = [];
+        }
 
         return view('dashboard', $data);
     }

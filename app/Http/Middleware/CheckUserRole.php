@@ -6,6 +6,8 @@ use App\Application\Services\AuthService;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 
 class CheckUserRole
 {
@@ -19,7 +21,7 @@ class CheckUserRole
     /**
      * Handle an incoming request.
      */
-    public function handle(Request $request, Closure $next, string $role): Response
+    public function handle(Request $request, Closure $next, string $role): Response|RedirectResponse|JsonResponse
     {
         $user = $this->authService->getCurrentUser();
 

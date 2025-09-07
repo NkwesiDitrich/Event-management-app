@@ -24,12 +24,12 @@ class UpdateProfileUseCase
         }
 
         // Check if email is already taken by another user
-        $existingUser = $this->userRepository->findByEmail($dto->email);
+        $email = new Email($dto->email);
+        $existingUser = $this->userRepository->findByEmail($email);
         if ($existingUser && $existingUser->getId() !== $userId) {
             throw new \DomainException('Email address is already taken');
         }
 
-        $email = new Email($dto->email);
         $user->updateProfile($dto->name, $email);
         
         $this->userRepository->save($user);

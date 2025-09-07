@@ -6,6 +6,7 @@ use App\Application\UseCases\User\UpdateProfileUseCase;
 use App\Application\DTOs\UpdateProfileDTO;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 
 class ProfileController extends Controller
@@ -19,14 +20,23 @@ class ProfileController extends Controller
 
     public function show(): View
     {
-        return view('profile.show', ['user' => auth()->user()]);
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        return view('profile.show', ['user' => $user]);
     }
 
     public function update(Request $request): RedirectResponse
     {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        
+        if (!$user) {
+            return redirect()->route('login');
+        }
+
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|max:255|unique:users,email,' . auth()->id(),
+            'email' => 'required|email|max:255|unique:users,email,' . $user->getId(),
         ]);
 
         try {
@@ -35,7 +45,7 @@ class ProfileController extends Controller
                 $request->email
             );
 
-            $this->updateProfileUseCase->execute(auth()->id(), $dto);
+            $this->updateProfileUseCase->execute($user->getId(), $dto);
 
             return redirect()->route('profile')->with('success', 'Profile updated successfully!');
         } catch (\Exception $e) {
