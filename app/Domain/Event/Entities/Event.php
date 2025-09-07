@@ -43,7 +43,7 @@ class Event
         $this->updatedAt = new \DateTime();
     }
 
-      public function setId(int $id): void
+    public function setId(int $id): void
     {
         $this->id = $id;
     }

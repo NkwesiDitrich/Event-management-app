@@ -65,6 +65,17 @@ class EloquentEventRepository implements EventRepositoryInterface
         })->toArray();
     }
 
+    public function findAll(): array
+    {
+        $models = EventModel::with('organizerModel')
+                    ->orderBy('created_at', 'desc')
+                    ->get();
+                    
+        return $models->map(function ($model) {
+            return $this->mapToEntity($model);
+        })->toArray();
+    }
+
     public function findEventsNearingCapacity(): array
     {
         $models = EventModel::with('organizerModel')
@@ -84,40 +95,40 @@ class EloquentEventRepository implements EventRepositoryInterface
     }
 
     private function mapToEntity(EventModel $model): Event
-{
-    // First, map the organizer user (simplified without password)
-    $organizer = new User(
-        $model->organizerModel->id,
-        $model->organizerModel->name,
-        new \App\Domain\User\ValueObjects\Email($model->organizerModel->email),
-        \App\Domain\User\ValueObjects\UserRole::fromString($model->organizerModel->role),
-        '' // We don't need the password hash for event context
-    );
+    {
+        // First, map the organizer user (simplified without password)
+        $organizer = new User(
+            $model->organizerModel->id,
+            $model->organizerModel->name,
+            new \App\Domain\User\ValueObjects\Email($model->organizerModel->email),
+            \App\Domain\User\ValueObjects\UserRole::fromString($model->organizerModel->role),
+            '' // We don't need the password hash for event context
+        );
 
-    // Create value objects
-    $eventDate = new \App\Domain\Event\ValueObjects\EventDate($model->event_date);
-    $location = new \App\Domain\Event\ValueObjects\EventLocation($model->location);
-    $capacity = new \App\Domain\Event\ValueObjects\EventCapacity($model->capacity);
+        // Create value objects
+        $eventDate = new \App\Domain\Event\ValueObjects\EventDate($model->event_date);
+        $location = new \App\Domain\Event\ValueObjects\EventLocation($model->location);
+        $capacity = new \App\Domain\Event\ValueObjects\EventCapacity($model->capacity);
 
-    // Create the event entity
-    $event = new Event(
-        $model->id,
-        $model->title,
-        $model->description,
-        $eventDate,
-        $location,
-        $capacity,
-        $organizer
-    );
+        // Create the event entity
+        $event = new Event(
+            $model->id,
+            $model->title,
+            $model->description,
+            $eventDate,
+            $location,
+            $capacity,
+            $organizer
+        );
 
-    // Set additional properties that aren't in the constructor
-    $event->setCurrentRegistrations($model->current_registrations);
-    $event->setStatus($model->status);
-    
-    // Handle timestamps - you might need to add setter methods for these too
-    // $event->setCreatedAt(new \DateTime($model->created_at));
-    // $event->setUpdatedAt(new \DateTime($model->updated_at));
+        // Set additional properties that aren't in the constructor
+        $event->setCurrentRegistrations($model->current_registrations);
+        $event->setStatus($model->status);
+        
+        // Handle timestamps - you might need to add setter methods for these too
+        // $event->setCreatedAt(new \DateTime($model->created_at));
+        // $event->setUpdatedAt(new \DateTime($model->updated_at));
 
-    return $event;
-}
+        return $event;
+    }
 }
