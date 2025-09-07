@@ -93,3 +93,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/users', [AdminUserController::class, 'index'])->name('admin.users');
     Route::get('/admin/events', [AdminEventController::class, 'index'])->name('admin.events');
 });
+
+Auth::routes();
+
+Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
