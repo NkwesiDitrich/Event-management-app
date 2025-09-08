@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Database\Factories\EventModelFactory;
 
 class EventModel extends Model
 {
@@ -71,5 +72,13 @@ class EventModel extends Model
             $q->whereNull('capacity')
               ->orWhereRaw('current_registrations < capacity');
         });
+    }
+
+    /**
+     * Explicitly tell Laravel which factory to use.
+     */
+    protected static function newFactory()
+    {
+        return EventModelFactory::new();
     }
 }

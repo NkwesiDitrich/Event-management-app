@@ -29,6 +29,10 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
+            'role' => fake()->randomElement(['admin', 'organizer', 'attendee']),
+            'phone' => fake()->phoneNumber(),
+            'bio' => fake()->optional(0.7)->paragraph(),
+            'is_active' => fake()->boolean(95), // 95% chance of being active
         ];
     }
 
@@ -39,6 +43,48 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    /**
+     * Create an admin user.
+     */
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'admin',
+            'is_active' => true,
+        ]);
+    }
+
+    /**
+     * Create an organizer user.
+     */
+    public function organizer(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'organizer',
+            'is_active' => true,
+        ]);
+    }
+
+    /**
+     * Create an attendee user.
+     */
+    public function attendee(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'attendee',
+        ]);
+    }
+
+    /**
+     * Create an inactive user.
+     */
+    public function inactive(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_active' => false,
         ]);
     }
 }
